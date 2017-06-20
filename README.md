@@ -1,19 +1,13 @@
-li-doTheJob
+co-ingest
 ===============
 
 ## Présentation ##
 
-Le module **co-dothejob** est un module minimal illustrant la partie fonctionnelle d'un `li-module`.
+Le module **co-ingest** est un module général de récolte de données.
 
 ### Fonctionnement ###
 
-`co-dothejob` effectue ses traitements dans une fonction `doTheJob()` dédiée.
 
-Dans notre cas minimal, le module effectue les opérations suivantes :
-  * récupération en entrée d'un `docObject` (objet JSON avec un champ `idIstex`), ainsi que d'une callback `cb`.
-  * test sur la valeur du champ `idIstex`
-  * renseigne un nouveau champ `canvasOK` avec la valeur `true`, sauf pour une valeur précise d'idIstex
-  * Les éventuelles erreurs sont renvoyées en paramètre de la callback `cb`
 
 ## Utilisation ##
 
@@ -35,9 +29,7 @@ npm test
 
 ### Exécution ###
 
-Comme pour tous les modules, la présente partie métier n'est pas destinée à être exécutée directement, puisqu'elle consiste uniquement à mettre à disposition une fonction `doTheJob`.
 
-L'exécution se fera donc en appelant cette fonction depuis une instanciation d`li-canvas` ou indirectement depuis les tests unitaires.
 
 ## Annexes ##
 
@@ -60,9 +52,3 @@ L'exécution se fera donc en appelant cette fonction depuis une instanciation d`
 
 ### Codes d'erreur ###
 
-Plage de codes : 0~99
-
-Code | Signification | Note(s)
------- | ---------------- | ---------
-0 | Tout s'est bien passé |
-1 | J\'aime po cet ID là... |
