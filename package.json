@@ -1,19 +1,19 @@
 {
-  "name": "co-dothejob",
-  "version": "1.1.0",
-  "description": "Module métier basique, conditor inside.",
+  "name": "co-ingest",
+  "version": "1.0.0",
+  "description": "Module conditor de début de chaîne.",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/conditor-project/co-dothejob.git"
+    "url": "https://github.com/conditor-project/co-ingest.git"
   },
   "keywords": [
-    "istex"
+    "conditor"
   ],
-  "author": "istex-api",
+  "author": "conditor",
   "license": "GNU",
   "dependencies": {
     "chai": "^3.4.0",
