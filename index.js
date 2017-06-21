@@ -8,7 +8,8 @@ const business = {},
     unzip = require("unzip"),
     fs = require("fs"),
     fstream = require("fstream"),
-    mkdirp = require("mkdirp");
+    mkdirp = require("mkdirp"),
+    fse = require("fs-extra");
 
 business.doTheJob = function(jsonLine, cb) {
 
@@ -16,9 +17,9 @@ business.doTheJob = function(jsonLine, cb) {
     /**
      * décompression de l"archive
      */
-    let readStream = fs.createReadStream(jsonLine.ingest.path);
-    mkdirp(jsonLine.ingest.path + "/" + jsonLine.ingest.sessionName);
-    let writeStream = fstream.Writer(jsonLine.ingest.path + "/" + jsonLine.ingest.sessionName);
+    let readStream = fs.createReadStream(jsonLine.corpusRoot + "/" + jsonLine.zipFile);
+    mkdirp(jsonLine.corpusRoot + "/" + jsonLine.sessionName);
+    let writeStream = fstream.Writer(jsonLine.corpusRoot + "/" + jsonLine.sessionName);
 
     readStream
         .pipe(unzip.Parse())
