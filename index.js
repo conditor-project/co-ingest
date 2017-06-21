@@ -1,27 +1,37 @@
 /* global module */
 /*jslint node: true */
 /*jslint indent: 2 */
+
 "use strict";
 
-var business = {};
+const business = {},
+    unzip = require("unzip"),
+    fs = require("fs"),
+    fstream = require("fstream"),
+    mkdirp = require("mkdirp"),
+    fse = require("fs-extra");
 
-business.doTheJob = function (jsonLine, cb) {
-    jsonLine.isConditor = true;
-    if (jsonLine.project !== 'conditor') {
-      jsonLine.isConditor = false;
-      return cb({
-        code: 1,
-        message: 'ici, on ne veut QUE du conditor...'
-      });
-    } else {
-      return cb();
-    }
+business.doTheJob = function(jsonLine, cb) {
+
+
+    /**
+     * décompression de l"archive
+     */
+    let readStream = fs.createReadStream(jsonLine.corpusRoot + "/" + jsonLine.zipFile);
+    mkdirp(jsonLine.corpusRoot + "/" + jsonLine.sessionName);
+    let writeStream = fstream.Writer(jsonLine.corpusRoot + "/" + jsonLine.sessionName);
+
+    readStream
+        .pipe(unzip.Parse())
+        .pipe(writeStream);
+
+
 };
 
-business.finalJob = function (docObjects, cb) {
+business.finalJob = function(docObjects, cb) {
     var err = [];
     err.push(docObjects.pop());
-    docObjects[0].ending = 'finalJob';
+    docObjects[0].ending = "finalJob";
     return cb(err);
 };
 
