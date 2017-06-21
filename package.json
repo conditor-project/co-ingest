@@ -17,6 +17,7 @@
   "license": "GNU",
   "dependencies": {
     "chai": "^3.4.0",
+    "fs-extra": "^3.0.1",
     "mocha": "^2.3.3"
   }
 }
