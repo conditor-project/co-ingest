@@ -4,35 +4,94 @@
 
 "use strict";
 
-const business = {},
-    unzip = require("unzip"),
-    fs = require("fs"),
-    fstream = require("fstream"),
+
+const _ = require("lodash"),
+    decompress = require("decompress"),
+    path = require("path"),
+    fse = require("fs-extra"),
+    uuid = require("uuid"),
     mkdirp = require("mkdirp"),
-    fse = require("fs-extra");
+    promise = require("bluebird"),
+    ls = require("ls");
 
-business.doTheJob = function(jsonLine, cb) {
+class CoIngest {
+
+    constructor() {
+        this.redisHost = process.env.REDIS_HOST || "localhost";
+        this.redisPort = process.env.REDIS_URL || 6379;
+        this.pubClient = require("redis").createClient({
+            "host": this.redisHost,
+            "port": this.redisPort
+        })
+        this.CONDITOR_SESSION = process.env.ISTEX_SESSION || "TEST_1970-01-01-00-00-00";
+        this.MODULEROOT = process.env.MODULEROOT || __dirname;
+        this.redisKey = this.CONDITOR_SESSION + ":co-ingest";
+
+    }
+
+    doTheJob(docObject, next) {
+
+        let id = 1;
+        let count = 0;
+        let myDocObjectFilePath = this.getWhereIWriteMyFiles(uuid.v4() + ".json", "out");
+        let directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
+        mkdirp.sync(directoryOfMyFile);
+        let writableStream = fse.createWriteStream(myDocObjectFilePath);
+
+        decompress(docObject.ingest.path, docObject.corpusRoot + "/" + docObject.ingest.sessionName, {
+            filter: file => path.extname(file.path) === ".xml"
+        }).then(function() {
+            let all_files = ls(docObject.corpusRoot + "/" + docObject.ingest.sessionName + "/*");
+            return _.each(all_files, function(file) {
+                console.log("sortie d' un jsonLine : " + id);
+                ++count;
+                console.log("valeur de count :" + count);
+                const object = { id: id, path: file.full };
+                writableStream.write(JSON.stringify(object) + "\n");
+                this.pubClient.hincrby("Module:" + this.redisKey, "outDocObject", 1);
+                id++;
+                if (count === 100) {
+                    count = 0;
+                    writableStream.end();
+                    this.pubClient.hincrby("Module:" + this.redisKey, "out", 1);
+                    this.pubClient.publish(this.redisKey + ":out", path.basename(myDocObjectFilePath));
+                    myDocObjectFilePath = this.getWhereIWriteMyFiles(uuid.v4() + ".json", "out");
+                    directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
+                    mkdirp.sync(directoryOfMyFile);
+                    writableStream = fse.createWriteStream(myDocObjectFilePath);
+                }
+            });
+        }).then(function(array) {
+            console.log("debut de la fin");
+            writableStream.end();
+            if (count !== 0) {
+                this.pubClient.hincrby("Module:" + this.redisKey, "out", 1);
+                this.pubClient.publish(this.redisKey + ":out", path.basename(myDocObjectFilePath));
+            }
+            let error = new Error("Le premier docObject passe en erreur afin de ne pas polluer la chaine.");
+            next(error, docObject);
+        }).catch(function(err) {
+            next(err);
+        });
+    }
+
+    finalJob(docObjects, cb) {
+        cb();
+    }
 
 
-    /**
-     * décompression de l"archive
-     */
-    let readStream = fs.createReadStream(jsonLine.corpusRoot + "/" + jsonLine.zipFile);
-    mkdirp(jsonLine.corpusRoot + "/" + jsonLine.sessionName);
-    let writeStream = fstream.Writer(jsonLine.corpusRoot + "/" + jsonLine.sessionName);
 
-    readStream
-        .pipe(unzip.Parse())
-        .pipe(writeStream);
+    getWhereIWriteMyFiles(file, dirOutOrErr) {
+        return path.join(
+            this.MODULEROOT,
+            dirOutOrErr,
+            this.CONDITOR_SESSION,
+            file[0],
+            file[1],
+            file[2],
+            file
+        );
+    }
 
-
-};
-
-business.finalJob = function(docObjects, cb) {
-    var err = [];
-    err.push(docObjects.pop());
-    docObjects[0].ending = "finalJob";
-    return cb(err);
-};
-
-module.exports = business;
+}
+module.exports = new CoIngest();
