@@ -11,7 +11,6 @@ const _ = require("lodash"),
     fse = require("fs-extra"),
     uuid = require("uuid"),
     mkdirp = require("mkdirp"),
-    promise = require("bluebird"),
     ls = require("ls");
 
 class CoIngest {
@@ -41,7 +40,7 @@ class CoIngest {
         decompress(docObject.ingest.path, docObject.corpusRoot + "/" + docObject.ingest.sessionName, {
             filter: file => path.extname(file.path) === ".xml"
         }).then(() => {
-            let all_files = ls(docObject.corpusRoot + "/" + docObject.ingest.sessionName + "/*");
+            let all_files = ls(docObject.corpusRoot + "/" + docObject.ingest.sessionName + "/*", { recurse: true });
             return _.each(all_files, (file) => {
                 console.log("sortie d' un jsonLine : " + id);
                 ++count;
