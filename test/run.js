@@ -83,6 +83,8 @@ describe(pkg.name + '/index.js', function() {
 
                 // parcours des fichiers trouvés (fichiers pouvant contenir 100 docs
                 let nbDocsFound = 0;
+                let jsonObjects;
+                let jsonObject;
                 files.forEach(function(file) {
                     jsonObjects = (fs.readFileSync(file, {
                         encoding: 'utf8'

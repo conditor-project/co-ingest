@@ -11,7 +11,8 @@ const _ = require("lodash"),
     fse = require("fs-extra"),
     uuid = require("uuid"),
     mkdirp = require("mkdirp"),
-    ls = require("ls");
+    ls = require("ls"),
+    cp = require("child_process");
 
 class CoIngest {
 
@@ -36,12 +37,13 @@ class CoIngest {
         let directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
         mkdirp.sync(directoryOfMyFile);
         let writableStream = fse.createWriteStream(myDocObjectFilePath);
-
+        console.log(path.join(docObject.corpusRoot, docObject.ingest.sessionName));
         decompress(docObject.ingest.path, docObject.corpusRoot + "/" + docObject.ingest.sessionName, {
             filter: file => path.extname(file.path) === ".xml"
         }).then(() => {
-            let all_files = ls(docObject.corpusRoot + "/" + docObject.ingest.sessionName + "/*", { recurse: true });
-            return _.each(all_files, (file) => {
+            let result = cp.spawnSync("find", [path.join(docObject.corpusRoot, docObject.ingest.sessionName), "-type", "f", "-name", "*.xml"], { timeout: 2000, encoding: "utf8" });
+            return _.each(result.output[1].split('\n'), (file) => {
+                if (file === "") return;
                 console.log("sortie d' un jsonLine : " + id);
                 ++count;
                 console.log("valeur de count :" + count);
@@ -58,6 +60,7 @@ class CoIngest {
                     directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
                     mkdirp.sync(directoryOfMyFile);
                     writableStream = fse.createWriteStream(myDocObjectFilePath);
+
                 }
             });
         }).then((array) => {
