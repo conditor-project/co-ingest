@@ -1,30 +1,35 @@
 {
-  "name": "co-ingest",
-  "version": "1.0.0",
-  "description": "Module conditor de début de chaîne.",
-  "main": "index.js",
-  "scripts": {
-    "test": "mocha"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/conditor-project/co-ingest.git"
-  },
-  "keywords": [
-    "conditor"
-  ],
-  "author": "conditor",
-  "license": "GNU",
-  "dependencies": {
-    "bluebird": "^3.5.0",
-    "chai": "^3.4.0",
-    "decompress": "^4.2.0",
-    "fs-extra": "^3.0.1",
-    "lodash": "^4.17.4",
-    "ls": "^0.2.1",
-    "mocha": "^2.3.3",
-    "path": "^0.12.7",
-    "redis": "^2.7.1",
-    "uuid": "^3.1.0"
-  }
+    "name": "co-ingest",
+    "version": "1.0.0",
+    "description": "Module conditor de début de chaîne.",
+    "main": "index.js",
+    "scripts": {
+        "test": "mocha"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/conditor-project/co-ingest.git"
+    },
+    "keywords": [
+        "conditor"
+    ],
+    "author": "conditor",
+    "license": "GNU",
+    "dependencies": {
+        "decompress": "^4.2.0",
+        "fs-extra": "^3.0.1",
+        "lodash": "^4.17.4",
+        "ls": "^0.2.1",
+        "path": "^0.12.7",
+        "redis": "^2.7.1",
+        "uuid": "^3.1.0",
+        "fstream": "^1.0.11",
+        "mkdirp": "^0.5.1",
+        "unzip": "^0.1.11"
+    },
+    "devDependencies": {
+        "glob": "^7.1.2",
+        "mocha": "^2.3.3",
+        "chai": "^3.4.0"
+    }
 }
