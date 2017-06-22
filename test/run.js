@@ -59,7 +59,6 @@ describe(pkg.name + '/index.js', function() {
                     path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/1/notice2-1-2.xml'),
                     path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/1/notice2-1-3.xml'),
                     path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/2/notice2-2-1.xml'),
-                    // path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/2/notice2-2-2.txt'),
                     path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/2/notice2-2-3.xml')
                 ];
                 for (let f of unzippedFiles) {
@@ -73,7 +72,7 @@ describe(pkg.name + '/index.js', function() {
 
         it('devrait générer les docObjects correspondant aux notices @2', function(done) {
 
-            const nbExpectedDocs = 8;
+            const nbExpectedDocs = 9;
 
             // vérifie qu'en out, les fichiers JSON contenant les docObjects ont bien été générés
             glob(outDir + '/**/*.json', function(err, files) {
@@ -94,11 +93,11 @@ describe(pkg.name + '/index.js', function() {
                     // parcours des jsonObjects du fichier courant
                     for (let i = 0; i < jsonObjects.length; i++) {
                         jsonObject = JSON.parse(jsonObjects[i]);
-                        expect(jsonObject.id.length,
+                        expect((''+jsonObject.id).length,
                             'le champ id est une chaîne caractères non vide').to.be.gt(0);
-                        expect(jsonObject.path,
+                        expect(jsonObject.path.length,
                             'le champ path est une chaîne caractères non vide').to.be.gt(0);
-                        expect(fs.existsSync(jsonObject.path), `Le fichier ${docObject.path} devrait exister`).to.be.true;
+                        expect(fs.existsSync(jsonObject.path), `Le fichier ${jsonObject.path} devrait exister`).to.be.true;
 
                     }
 
