@@ -47,7 +47,7 @@ class CoIngest {
                 console.log("sortie d' un jsonLine : " + id);
                 ++count;
                 console.log("valeur de count :" + count);
-                const object = { id: id, path: file };
+                const object = { id: id + "", path: file };
                 writableStream.write(JSON.stringify(object) + "\n");
                 this.pubClient.hincrby("Module:" + this.redisKey, "outDocObject", 1);
                 id++;
