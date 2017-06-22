@@ -22,7 +22,7 @@ class CoIngest {
         this.pubClient = require("redis").createClient({
             "host": this.redisHost,
             "port": this.redisPort
-        })
+        });
         this.CONDITOR_SESSION = process.env.ISTEX_SESSION || "TEST_1970-01-01-00-00-00";
         this.MODULEROOT = process.env.MODULEROOT || __dirname;
         this.redisKey = this.CONDITOR_SESSION + ":co-ingest";
@@ -40,9 +40,9 @@ class CoIngest {
 
         decompress(docObject.ingest.path, docObject.corpusRoot + "/" + docObject.ingest.sessionName, {
             filter: file => path.extname(file.path) === ".xml"
-        }).then(function() {
+        }).then(() => {
             let all_files = ls(docObject.corpusRoot + "/" + docObject.ingest.sessionName + "/*");
-            return _.each(all_files, function(file) {
+            return _.each(all_files, (file) => {
                 console.log("sortie d' un jsonLine : " + id);
                 ++count;
                 console.log("valeur de count :" + count);
@@ -61,7 +61,7 @@ class CoIngest {
                     writableStream = fse.createWriteStream(myDocObjectFilePath);
                 }
             });
-        }).then(function(array) {
+        }).then((array) => {
             console.log("debut de la fin");
             writableStream.end();
             if (count !== 0) {
@@ -70,7 +70,7 @@ class CoIngest {
             }
             let error = new Error("Le premier docObject passe en erreur afin de ne pas polluer la chaine.");
             next(error, docObject);
-        }).catch(function(err) {
+        }).catch((err) => {
             next(err);
         });
     }
