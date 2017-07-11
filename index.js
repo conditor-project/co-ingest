@@ -35,13 +35,15 @@ class CoIngest {
         let count = 0;
         let myDocObjectFilePath = this.getWhereIWriteMyFiles(uuid.v4() + ".json", "out");
         let directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
+        let uploadPath = process.env.CO_UPLOAD || '/applis/istex/CorpusConditor/';
+        let saveDocumentRoot = process.env.CO_ROOTSAVE || '/applis/istex/CorpusConditor/SaveRoot/';
         mkdirp.sync(directoryOfMyFile);
         let writableStream = fse.createWriteStream(myDocObjectFilePath);
-        console.log(path.join(docObject.corpusRoot, docObject.ingest.sessionName));
-        decompress(docObject.ingest.path, docObject.corpusRoot + "/" + docObject.ingest.sessionName, {
+        mkdirp.sync(path.join(saveDocumentRoot, docObject.ingest.savePath));
+        decompress(path.join(uploadPath + "/" + docObject.ingest.file), path.join(saveDocumentRoot, docObject.ingest.savePath), {
             filter: file => path.extname(file.path) === ".xml"
         }).then(() => {
-            let result = cp.spawnSync("find", [path.join(docObject.corpusRoot, docObject.ingest.sessionName), "-type", "f", "-name", "*.xml"], { timeout: 2000, encoding: "utf8" });
+            let result = cp.spawnSync("find", [path.join(saveDocumentRoot, docObject.ingest.savePath), "-type", "f", "-name", "*.xml"], { timeout: 2000, encoding: "utf8" });
             return _.each(result.output[1].split('\n'), (file) => {
                 if (file === "") return;
                 console.log("sortie d' un jsonLine : " + id);
