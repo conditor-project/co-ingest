@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/conditor-project/co-ingest.svg?branch=master)](https://travis-ci.org/conditor-project/co-ingest)
+
 co-ingest
 ===============
 

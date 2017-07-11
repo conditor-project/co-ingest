@@ -1,0 +1,15 @@
+
+language: node_js
+node_js:
+  - "6"
+services:
+  - redis-server
+notifications:
+  email:
+    recipients:
+      - claude.niederlender@inist.fr
+      - jean-baptiste.genicot@inist.fr
+      - conditordev@gmail.com
+    on_success: change
+on_failure: always
+
