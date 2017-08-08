@@ -35,22 +35,23 @@ class CoIngest {
         let count = 0;
         let myDocObjectFilePath = this.getWhereIWriteMyFiles(uuid.v4() + ".json", "out");
         let directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
-        let uploadPath = process.env.CO_UPLOAD || '/applis/istex/CorpusConditor/';
-        let saveDocumentRoot = process.env.CO_ROOTSAVE || '/applis/istex/CorpusConditor/SaveRoot/';
         mkdirp.sync(directoryOfMyFile);
         let writableStream = fse.createWriteStream(myDocObjectFilePath);
-        mkdirp.sync(path.join(saveDocumentRoot, docObject.ingest.savePath));
-        decompress(path.join(uploadPath + "/" + docObject.ingest.file), path.join(saveDocumentRoot, docObject.ingest.savePath), {
+        mkdirp.sync(docObject.corpusRoot);
+        decompress(docObject.ingest.path, docObject.corpusRoot, {
             filter: file => path.extname(file.path) === ".xml"
         }).then(() => {
-            let result = cp.spawnSync("find", [path.join(saveDocumentRoot, docObject.ingest.savePath), "-type", "f", "-name", "*.xml"], { timeout: 2000, encoding: "utf8" });
+            let result = cp.spawnSync("find", [docObject.corpusRoot, "-type", "f", "-name", "*.xml"], { timeout: 2000, encoding: "utf8" });
             return _.each(result.output[1].split('\n'), (file) => {
                 if (file === "") return;
                 console.log("sortie d' un jsonLine : " + id);
                 ++count;
                 console.log("valeur de count :" + count);
-                const object = { id: id + "", path: file };
-                writableStream.write(JSON.stringify(object) + "\n");
+                // const newDocObject = _.merge(docObject,{ id: id + "", path: file });
+                let newDocObject = _.cloneDeep(docObject);
+                newDocObject.id = id;
+                newDocObject.path = file;
+                writableStream.write(JSON.stringify(newDocObject) + "\n");
                 this.pubClient.hincrby("Module:" + this.redisKey, "outDocObject", 1);
                 id++;
                 if (count === 100) {

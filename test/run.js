@@ -14,10 +14,11 @@ var
 const sessionName = "TEST_1970-01-01-00-00-00";
 
 let jsonInput = {
+    source : 'sourceName',
     ingest: {
         type: 'zip',
         path: path.join(__dirname, 'dataset/zip/in/input.zip'),
-        sessionName
+        sessionName: sessionName
     },
     corpusRoot: path.join(__dirname, 'dataset/zip/out')
 };
@@ -51,15 +52,15 @@ describe(pkg.name + '/index.js', function() {
 
                 // vérifie que tous les fichiers du zip ont bien été dézippés
                 const unzippedFiles = [
-                    path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, 'notice1.xml'),
-                    path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, 'notice2.xml'),
-                    path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '1/notice1-1.xml'),
-                    path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/notice2-1.xml'),
-                    path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/1/notice2-1-1.xml'),
-                    path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/1/notice2-1-2.xml'),
-                    path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/1/notice2-1-3.xml'),
-                    path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/2/notice2-2-1.xml'),
-                    path.join(jsonInput.corpusRoot, jsonInput.ingest.sessionName, '2/2/notice2-2-3.xml')
+                    path.join(jsonInput.corpusRoot, 'notice1.xml'),
+                    path.join(jsonInput.corpusRoot, 'notice2.xml'),
+                    path.join(jsonInput.corpusRoot, '1/notice1-1.xml'),
+                    path.join(jsonInput.corpusRoot, '2/notice2-1.xml'),
+                    path.join(jsonInput.corpusRoot, '2/1/notice2-1-1.xml'),
+                    path.join(jsonInput.corpusRoot, '2/1/notice2-1-2.xml'),
+                    path.join(jsonInput.corpusRoot, '2/1/notice2-1-3.xml'),
+                    path.join(jsonInput.corpusRoot, '2/2/notice2-2-1.xml'),
+                    path.join(jsonInput.corpusRoot, '2/2/notice2-2-3.xml')
                 ];
                 for (let f of unzippedFiles) {
                     expect(fs.existsSync(f), `Le fichier ${f} devrait exister`).to.be.true;
@@ -71,7 +72,6 @@ describe(pkg.name + '/index.js', function() {
 
 
         it('devrait générer les docObjects correspondant aux notices @2', function(done) {
-
             const nbExpectedDocs = 9;
 
             // vérifie qu'en out, les fichiers JSON contenant les docObjects ont bien été générés
@@ -93,14 +93,14 @@ describe(pkg.name + '/index.js', function() {
                     // parcours des jsonObjects du fichier courant
                     for (let i = 0; i < jsonObjects.length; i++) {
                         jsonObject = JSON.parse(jsonObjects[i]);
+                        expect(jsonObject.source).to.be.equal('sourceName');
                         expect((''+jsonObject.id).length,
                             'le champ id est une chaîne caractères non vide').to.be.gt(0);
                         expect(jsonObject.path.length,
                             'le champ path est une chaîne caractères non vide').to.be.gt(0);
                         expect(fs.existsSync(jsonObject.path), `Le fichier ${jsonObject.path} devrait exister`).to.be.true;
-
+                        console.log(JSON.stringify(jsonObject))
                     }
-
                 }); //fin forEach
 
                 expect(nbDocsFound,
@@ -112,6 +112,7 @@ describe(pkg.name + '/index.js', function() {
 
 
         });
+
     });
 
 
