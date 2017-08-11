@@ -49,7 +49,7 @@ Les traitements effectués sont :
 - la décompression de l'archive en extrayant uniquement les fichiers dont l'extension est "xml".
 - la génération de fichiers JSON contenant un maximum de 100 entrées, chacune pointant sur l'un des fichiers XML extraits 
 
-Un seul champ du JSON d'entrée (`path`) est spécifique à ce type d'ingestion :
+Un seul champ du JSON d'entrée (`ingest.path`) est spécifique à ce type d'ingestion :
 
 
 ```
