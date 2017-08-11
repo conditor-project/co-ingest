@@ -14,7 +14,9 @@ Le module `co-ingest` est un module d'entrée de chaîne. Il est donc voué à �
 Ainsi, contrairement autres modules héritant du comportement de `li-module`, il ne traite pas autant de documents en entrée (in) qu'en sortie (out + err), mais :
   - il prend en entrée un fichier JSON "bootstrap" dont le but est d'initialiser la chaîne
   - il génère autant de "docObjects" que de notices trouvées.
- 
+
+#### Structure d'entrée
+
 Le fichier JSON d'entrée possède la structure minimale suivante :
 
 ```
@@ -28,6 +30,8 @@ Le fichier JSON d'entrée possède la structure minimale suivante :
     "corpusRoot": "path_to_unzip_destination"  // root of the set of docs => absolute path of where the notices will be extracted
 }
 ```
+
+#### Structure de sortie
 
 En sortie, les JSON produits reprennent l'ensemble des champs d'entrée, plus des champs spécifiques à chaque notice/document identifié :
 
@@ -44,7 +48,7 @@ En sortie, les JSON produits reprennent l'ensemble des champs d'entrée, plus de
 #### ingestions de type ZIP ####
 
 En mode Zip, `co-ingest` prend en entrée une archive ZIP, l'extrait et tente d'identifier les notices XML contenues.
- 
+
 Les traitements effectués sont : 
 - la décompression de l'archive en extrayant uniquement les fichiers dont l'extension est "xml".
 - la génération de fichiers JSON contenant un maximum de 100 entrées, chacune pointant sur l'un des fichiers XML extraits 
@@ -110,3 +114,4 @@ L'exécution se fera donc en appelant cette fonction depuis une instanciation de
 
 ### Codes d'erreur ###
 
+```
