@@ -11,19 +11,20 @@ const _ = require("lodash"),
   fse = require("fs-extra"),
   uuid = require("uuid"),
   mkdirp = require("mkdirp"),
-  ls = require("ls"),
-  cp = require("child_process");
+  cp = require("child_process"),
+  Redis = require("ioredis");
+
 
 class CoIngest {
 
   constructor() {
     this.redisHost = process.env.REDIS_HOST || "localhost";
     this.redisPort = process.env.REDIS_PORT || 6379;
-    this.pubClient = require("redis").createClient({
+    this.pubClient = new Redis({
       "host": this.redisHost,
       "port": this.redisPort
     });
-    this.redisClient = require("redis").createClient({
+    this.redisClient = new Redis({
       "host": this.redisHost,
       "port": this.redisPort
     });
@@ -35,59 +36,96 @@ class CoIngest {
 
   doTheJob(docObject, next) {
 
+//On initie les variables utiles
+
     let id = 1;
-    let count = 0;
-    let myDocObjectFilePath = this.getWhereIWriteMyFiles(uuid.v4() + ".json", "out");
-    let directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
-    mkdirp.sync(directoryOfMyFile);
-    let writableStream = fse.createWriteStream(myDocObjectFilePath);
+    let bloc=[];
+    
+// On crée le répertoire utile
     mkdirp.sync(docObject.corpusRoot);
+
+// On décompresse l'archive 
     decompress(docObject.ingest.path, docObject.corpusRoot, {
       filter: file => path.extname(file.path) === ".xml"
     }).then(() => {
-      let result = cp.spawnSync("find", [docObject.corpusRoot, "-type", "f", "-name", "*.xml"], {
+      return cp.spawnSync("find", [docObject.corpusRoot, "-type", "f", "-name", "*.xml"], {
         timeout: 2000,
         encoding: "utf8"
-      });
-      return _.each(result.output[1].split('\n'), (file) => {
-        if (file === "") return;
-        console.log("sortie d' un jsonLine : " + id);
-        ++count;
-        console.log("valeur de count :" + count);
-        let newDocObject = _.cloneDeep(docObject);
-        newDocObject.id = id;
-        newDocObject.path = file;
-        writableStream.write(JSON.stringify(newDocObject) + "\n");
-        this.redisClient.hincrby("Module:" + this.redisKey, "outDocObject", 1);
-        id++;
-        if (count === 100) {
-          count = 0;
-          writableStream.end();
-          this.redisClient.hincrby("Module:" + this.redisKey, "out", 1);
-          this.pubClient.publish(this.redisKey + ":out", path.basename(myDocObjectFilePath));
-          myDocObjectFilePath = this.getWhereIWriteMyFiles(uuid.v4() + ".json", "out");
-          directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
-          mkdirp.sync(directoryOfMyFile);
-          writableStream = fse.createWriteStream(myDocObjectFilePath);
-
+      }).output[1].trim().split("\n");
+    }).then((listing)=>{
+      let newDocObject;
+      let blocFormate;
+      while(listing.length>0){
+        if (listing.length>100){
+          bloc=listing.splice(0,100);
+          blocFormate=[];
+          _.each(bloc,(pathFile)=>{
+            newDocObject = _.cloneDeep(docObject);
+            newDocObject.id = id;
+            newDocObject.path = pathFile;
+            id++;
+            blocFormate.push(newDocObject)
+          });
+          this.sendFlux(blocFormate,docObject,next);
         }
-      });
-    }).then((array) => {
-      console.log("debut de la fin");
-      writableStream.end();
-      if (count !== 0) {
-        this.redisClient.hincrby("Module:" + this.redisKey, "out", 1);
-        this.pubClient.publish(this.redisKey + ":out", path.basename(myDocObjectFilePath));
+        else {
+          bloc=listing.splice(0,(listing.length));
+          blocFormate=[];
+          _.each(bloc,(pathFile)=>{
+            newDocObject = _.cloneDeep(docObject);
+            newDocObject.id = id;
+            newDocObject.path = pathFile;
+            id++;
+            blocFormate.push(newDocObject)
+          });
+          this.sendFlux(blocFormate,docObject,next,true);
+        }
       }
-      let error = new Error("Le premier docObject passe en erreur afin de ne pas polluer la chaine.");
-      next(error, docObject);
-
-    }).catch((err) => {
-      next(err);
     });
   }
 
-  finalJob(docObjects, cb) {
+  sendFlux(bloc,docObject,next,endFlag=false){
+    if (bloc.length>0){
+      let myDocObjectFilePath = this.getWhereIWriteMyFiles(uuid.v4() + ".json", "out");
+      let directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
+      mkdirp.sync(directoryOfMyFile);
+      let writableStream = fse.createWriteStream(myDocObjectFilePath);
+      mkdirp.sync(docObject.corpusRoot);
+      _.each(bloc,(object)=>{
+        writableStream.write(JSON.stringify(object) + "\n");
+      });
+      writableStream.end(this.sendRedis.bind(this,myDocObjectFilePath,bloc.length,docObject,next,endFlag));
+    }
+  }
+
+  sendRedis(myDocObjectFilePath,length,docObject,next,endFlag=false){
+    console.log("envoi des infos à redis key:"+this.redisKey+" path:"+path.basename(myDocObjectFilePath));
+    let pipelineClient = this.redisClient.pipeline();
+    let pipelinePublish = this.pubClient.pipeline();
+    pipelineClient.hincrby("Module:"+this.redisKey,"outDocObject",length)
+    .hincrby("Module:"+this.redisKey,"out",1).exec();
+    pipelinePublish.publish(this.redisKey + ":out",path.basename(myDocObjectFilePath)).exec();
+    this.sendEndFlag(next,docObject,endFlag);
+    /** 
+    this.redisClient.hincrby("Module:" + this.redisKey, "outDocObject", length)
+    .then(this.redisClient.hincrby("Module:"+this.redisKey,"out",1))
+    .then(this.pubClient.publish(this.redisKey + ":out", path.basename(myDocObjectFilePath)))
+    .then(this.sendEndFlag(next,docObject,endFlag));
+    */
+  }
+  
+
+  sendEndFlag(next,docObject,endFlag){
+    //console.log(""+this.redisClient.get("outDocObject"));
+    //console.log(""+this.redisClient.get("out"));
+    if (endFlag){
+      console.log("fin");
+      let error = new Error("Le premier docObject passe en erreur afin de ne pas polluer la chaine.");
+      next(error, docObject);
+    }
+  }
+
+  finalJob(docObjects, cb){
     cb();
   }
 
@@ -105,4 +143,5 @@ class CoIngest {
   }
 
 }
+
 module.exports = new CoIngest();
