@@ -63,6 +63,7 @@ class CoIngest {
             newDocObject = _.cloneDeep(docObject);
             newDocObject.id = id;
             newDocObject.path = pathFile;
+            newDocObject.source = docObject.source;
             id++;
             blocFormate.push(newDocObject)
           });
