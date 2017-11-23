@@ -37,9 +37,12 @@ class CoIngest {
   doTheJob(docObject, next) {
 
 //On initie les variables utiles
-
-    let id = 1;
-    let bloc=[];
+   let streamXML;
+   let listing=[];
+   let bloc;
+   let blocFormate=[];
+   let newDocObject;
+   let listPath="";
     
 // On crée le répertoire utile
     mkdirp.sync(docObject.corpusRoot);
@@ -48,15 +51,21 @@ class CoIngest {
     decompress(docObject.ingest.path, docObject.corpusRoot, {
       filter: file => path.extname(file.path) === ".xml"
     }).then(() => {
-      return cp.spawnSync("find", [docObject.corpusRoot, "-type", "f", "-name", "*.xml"], {
+
+      let id=0;
+      streamXML = cp.spawn("find", [docObject.corpusRoot, "-type", "f", "-name", "*.xml"], {
         timeout: 2000,
         encoding: "utf8"
-      }).output[1].trim().split("\n");
-    }).then((listing)=>{
-      let newDocObject;
-      let blocFormate;
-      while(listing.length>0){
-        if (listing.length>100){
+      });
+
+      streamXML.stdout.on("data",(chunk)=>{
+        listPath+=chunk.toString();
+
+        _.each(listPath.substring(0,listPath.lastIndexOf("\n")).split("\n"),(pathXML)=>{
+          if (pathXML.trim()!=="") listing.push(pathXML.trim());
+        });
+        listPath = listPath.substring(listPath.lastIndexOf("\n"),listPath.length);
+        while (listing.length>100){
           bloc=listing.splice(0,100);
           blocFormate=[];
           _.each(bloc,(pathFile)=>{
@@ -69,7 +78,15 @@ class CoIngest {
           });
           this.sendFlux(blocFormate,docObject,next);
         }
-        else {
+      });
+
+      streamXML.stdout.on("end",(chunk)=>{
+        if (listPath.trim()!==""){
+          _.each(listPath.split("\n"),(pathXML)=>{
+            if (pathXML.trim()!=="") listing.push(pathXML.trim());
+          });
+        }
+        if (listing.length>0){
           bloc=listing.splice(0,(listing.length));
           blocFormate=[];
           _.each(bloc,(pathFile)=>{
@@ -77,13 +94,16 @@ class CoIngest {
             newDocObject.id = id;
             newDocObject.path = pathFile;
             id++;
-            blocFormate.push(newDocObject)
+            blocFormate.push(newDocObject);
           });
           this.sendFlux(blocFormate,docObject,next,true);
         }
-      }
+      });
+
     });
   }
+
+  
 
   sendFlux(bloc,docObject,next,endFlag=false){
     if (bloc.length>0){
@@ -100,28 +120,24 @@ class CoIngest {
   }
 
   sendRedis(myDocObjectFilePath,length,docObject,next,endFlag=false){
-    console.log("envoi des infos à redis key:"+this.redisKey+" path:"+path.basename(myDocObjectFilePath));
+    //console.log("envoi des infos à redis key:"+this.redisKey+" path:"+path.basename(myDocObjectFilePath));
     let pipelineClient = this.redisClient.pipeline();
     let pipelinePublish = this.pubClient.pipeline();
     pipelineClient.hincrby("Module:"+this.redisKey,"outDocObject",length)
     .hincrby("Module:"+this.redisKey,"out",1).exec();
     pipelinePublish.publish(this.redisKey + ":out",path.basename(myDocObjectFilePath)).exec();
     this.sendEndFlag(next,docObject,endFlag);
-    /** 
-    this.redisClient.hincrby("Module:" + this.redisKey, "outDocObject", length)
-    .then(this.redisClient.hincrby("Module:"+this.redisKey,"out",1))
-    .then(this.pubClient.publish(this.redisKey + ":out", path.basename(myDocObjectFilePath)))
-    .then(this.sendEndFlag(next,docObject,endFlag));
-    */
   }
   
 
   sendEndFlag(next,docObject,endFlag){
-    //console.log(""+this.redisClient.get("outDocObject"));
-    //console.log(""+this.redisClient.get("out"));
     if (endFlag){
       console.log("fin");
-      let error = new Error("Le premier docObject passe en erreur afin de ne pas polluer la chaine.");
+      let error = {
+        errCode: 1,
+        errMessage: "Le premier docObject passe en erreur afin de ne pas polluer la chaine."
+      };
+      docObject.error = error;
       next(error, docObject);
     }
   }

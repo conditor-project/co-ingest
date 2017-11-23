@@ -45,7 +45,7 @@ describe(pkg.name + '/index.js', function() {
     describe('#doTheJob pour les ingestions de type "zip"', function() {
 
         it('devrait extraire les notices @1', function(done) {
-            var docObject;
+
             business.doTheJob(jsonInput, function(err) {
 
                 //expect(err, "La fonction doTheJob ne devrait pas renvoyer d'erreur").to.be.undefined;
@@ -99,7 +99,7 @@ describe(pkg.name + '/index.js', function() {
                         expect(jsonObject.path.length,
                             'le champ path est une chaîne caractères non vide').to.be.gt(0);
                         expect(fs.existsSync(jsonObject.path), `Le fichier ${jsonObject.path} devrait exister`).to.be.true;
-                        console.log(JSON.stringify(jsonObject))
+                        //console.log(JSON.stringify(jsonObject))
                     }
                 }); //fin forEach
 
