@@ -1,7 +1,3 @@
-/* global module */
-/*jslint node: true */
-/*jslint indent: 2 */
-
 "use strict";
 
 
@@ -73,6 +69,7 @@ class CoIngest {
             newDocObject.id = id;
             newDocObject.path = pathFile;
             newDocObject.source = docObject.source;
+            newDocObject.idIngest = this.CONDITOR_SESSION;
             id++;
             blocFormate.push(newDocObject)
           });
@@ -93,6 +90,8 @@ class CoIngest {
             newDocObject = _.cloneDeep(docObject);
             newDocObject.id = id;
             newDocObject.path = pathFile;
+            newDocObject.source = docObject.source;
+            newDocObject.idIngest = this.CONDITOR_SESSION;
             id++;
             blocFormate.push(newDocObject);
           });

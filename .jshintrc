@@ -15,7 +15,6 @@
   "wsh"           : false,   // Windows Scripting Host.
 
   "jquery"        : false,
-  "ender"         : false,
   "prototypejs"   : false,
   "mootools"      : false,
   "dojo"          : false,
@@ -33,7 +32,7 @@
 
 
   // ECMAScript 6.
-  "esVersion"     : 6,   // Allow ECMAScript 5 syntax.
+  "esversion"     : 6,   // Allow ECMAScript 5 syntax.
   "strict"        : false,  // Require `use strict` pragma  in every file.
   "globalstrict"  : true,  // Allow global "use strict" (also enables 'strict').
 
