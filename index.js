@@ -91,7 +91,7 @@ class CoIngest {
             newDocObject.id = id;
             newDocObject.path = pathFile;
             newDocObject.source = docObject.source;
-            newDocObject.idIngest = this.CONDITOR_SESSION;
+            newDocObject.ingestId = this.CONDITOR_SESSION;
             id++;
             blocFormate.push(newDocObject);
           });
@@ -106,12 +106,14 @@ class CoIngest {
 
   sendFlux(bloc,docObject,next,endFlag=false){
     if (bloc.length>0){
-      let myDocObjectFilePath = this.getWhereIWriteMyFiles(uuid.v4() + ".json", "out");
+      let nomFichier = uuid.v4()+".json";
+      let myDocObjectFilePath = this.getWhereIWriteMyFiles(nomFichier, "out");
       let directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
       mkdirp.sync(directoryOfMyFile);
       let writableStream = fse.createWriteStream(myDocObjectFilePath);
       mkdirp.sync(docObject.corpusRoot);
       _.each(bloc,(object)=>{
+        object.ingestBaseName=nomFichier; 
         writableStream.write(JSON.stringify(object) + "\n");
       });
       writableStream.end(this.sendRedis.bind(this,myDocObjectFilePath,bloc.length,docObject,next,endFlag));
