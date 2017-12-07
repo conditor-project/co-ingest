@@ -69,7 +69,7 @@ class CoIngest {
             newDocObject.id = id;
             newDocObject.path = pathFile;
             newDocObject.source = docObject.source;
-            newDocObject.idIngest = this.CONDITOR_SESSION;
+            newDocObject.ingestId = this.CONDITOR_SESSION;
             id++;
             blocFormate.push(newDocObject)
           });
