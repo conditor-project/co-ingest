@@ -63,6 +63,7 @@ class CoIngest {
         listPath = listPath.substring(listPath.lastIndexOf("\n"),listPath.length);
         while (listing.length>100){
           bloc=listing.splice(0,100);
+          _.shuffle(bloc);
           blocFormate=[];
           _.each(bloc,(pathFile)=>{
             newDocObject = _.cloneDeep(docObject);
@@ -85,6 +86,7 @@ class CoIngest {
         }
         if (listing.length>0){
           bloc=listing.splice(0,(listing.length));
+          _.shuffle(bloc);
           blocFormate=[];
           _.each(bloc,(pathFile)=>{
             newDocObject = _.cloneDeep(docObject);
