@@ -81,7 +81,7 @@ class CoIngest {
       streamXML.stdout.on("end",(chunk)=>{
         if (listPath.trim()!==""){
           _.each(listPath.split("\n"),(pathXML)=>{
-            if (pathXML.trim()!=="") listing.push(pathXML.trim());
+            if (pathXML.trim()!=="") {listing.push(pathXML.trim());}
           });
         }
         if (listing.length>0){
