@@ -16,6 +16,7 @@
   "author": "conditor",
   "license": "GNU",
   "dependencies": {
+    "async": "^2.6.0",
     "decompress": "^4.2.0",
     "fs-extra": "^3.0.1",
     "fstream": "^1.0.11",

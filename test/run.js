@@ -48,6 +48,8 @@ describe(pkg.name + '/index.js', function() {
 
             business.doTheJob(jsonInput, function(err) {
 
+                //if (err) { return done(err);}
+
                 //expect(err, "La fonction doTheJob ne devrait pas renvoyer d'erreur").to.be.undefined;
 
                 // vérifie que tous les fichiers du zip ont bien été dézippés
@@ -76,7 +78,7 @@ describe(pkg.name + '/index.js', function() {
 
             // vérifie qu'en out, les fichiers JSON contenant les docObjects ont bien été générés
             glob(outDir + '/**/*.json', function(err, files) {
-
+                //if (err) { return done(err);}
                 expect(files.length,
                     'les ' + nbExpectedDocs + ' documents du jeu de test sont dans un seul fichier, non pas ' + files.length).to.equal(1);
 

@@ -8,6 +8,8 @@ const _ = require("lodash"),
   uuid = require("uuid"),
   mkdirp = require("mkdirp"),
   cp = require("child_process"),
+  async = require("async"),
+  Promise = require("bluebird"),
   Redis = require("ioredis");
 
 
@@ -27,58 +29,65 @@ class CoIngest {
     this.CONDITOR_SESSION = process.env.ISTEX_SESSION || "TEST_1970-01-01-00-00-00";
     this.MODULEROOT = process.env.MODULEROOT || __dirname;
     this.redisKey = this.CONDITOR_SESSION + ":co-ingest";
+    this.id = 0 ;
+    this.endFlag = false;
 
   }
 
-  doTheJob(docObject, next) {
+  pushDocObject(docObject,blocContainer){
+    return Promise.try(()=>{
+      let arrayPathFile = [];
+      _.each(blocContainer.bloc,(pathFile)=>{
+        let newDocObject;
+        newDocObject = _.cloneDeep(docObject);
+        newDocObject.id = this.id;
+        newDocObject.path = pathFile;
+        newDocObject.source = docObject.source;
+        newDocObject.ingestId = this.CONDITOR_SESSION;
+        this.id++;
+        arrayPathFile.push(newDocObject);
+      })
+      blocContainer.bloc = arrayPathFile;
+      this.blocFormate.push(blocContainer);
+    });
+  }
 
-//On initie les variables utiles
-   let streamXML;
-   let listing=[];
-   let bloc;
-   let blocFormate=[];
-   let newDocObject;
-   let listPath="";
-    
-// On crée le répertoire utile
-    mkdirp.sync(docObject.corpusRoot);
+  streamInit(docObject,next){
 
-// On décompresse l'archive 
-    decompress(docObject.ingest.path, docObject.corpusRoot, {
-      filter: file => path.extname(file.path) === ".xml"
-    }).then(() => {
+    return Promise.try(()=>{
+      let bloc,
+      streamXML;
+      let listing = [];
+      let listPath="";
 
-      let id=0;
       streamXML = cp.spawn("find", [docObject.corpusRoot, "-type", "f", "-name", "*.xml"], {
         timeout: 2000,
         encoding: "utf8"
       });
 
       streamXML.stdout.on("data",(chunk)=>{
+        let blocContainer = {};
         listPath+=chunk.toString();
-
         _.each(listPath.substring(0,listPath.lastIndexOf("\n")).split("\n"),(pathXML)=>{
-          if (pathXML.trim()!=="") listing.push(pathXML.trim());
+          if (pathXML.trim()!=="") { listing.push(pathXML.trim()); }
         });
         listPath = listPath.substring(listPath.lastIndexOf("\n"),listPath.length);
         while (listing.length>100){
           bloc=listing.splice(0,100);
           _.shuffle(bloc);
-          blocFormate=[];
-          _.each(bloc,(pathFile)=>{
-            newDocObject = _.cloneDeep(docObject);
-            newDocObject.id = id;
-            newDocObject.path = pathFile;
-            newDocObject.source = docObject.source;
-            newDocObject.ingestId = this.CONDITOR_SESSION;
-            id++;
-            blocFormate.push(newDocObject)
-          });
-          this.sendFlux(blocFormate,docObject,next);
+          blocContainer.bloc = bloc;
+          this.pushDocObject(docObject,blocContainer);
         }
       });
 
+      streamXML.stderr.on('data',(chunk)=>{
+        let err = new Error('Erreur stderr streamXML(co-ingest): '+chunk);
+        next(err);
+      });
+
       streamXML.stdout.on("end",(chunk)=>{
+        let blocContainer={};
+        this.endFlag = true;
         if (listPath.trim()!==""){
           _.each(listPath.split("\n"),(pathXML)=>{
             if (pathXML.trim()!=="") {listing.push(pathXML.trim());}
@@ -87,63 +96,96 @@ class CoIngest {
         if (listing.length>0){
           bloc=listing.splice(0,(listing.length));
           _.shuffle(bloc);
-          blocFormate=[];
-          _.each(bloc,(pathFile)=>{
-            newDocObject = _.cloneDeep(docObject);
-            newDocObject.id = id;
-            newDocObject.path = pathFile;
-            newDocObject.source = docObject.source;
-            newDocObject.ingestId = this.CONDITOR_SESSION;
-            id++;
-            blocFormate.push(newDocObject);
-          });
-          this.sendFlux(blocFormate,docObject,next,true);
+          blocContainer.bloc = bloc;
+          this.pushDocObject(docObject,blocContainer);
         }
+        
       });
-
     });
   }
 
-  
+  doTheJob(docObject, next) {
 
-  sendFlux(bloc,docObject,next,endFlag=false){
-    if (bloc.length>0){
-      let nomFichier = uuid.v4()+".json";
-      let myDocObjectFilePath = this.getWhereIWriteMyFiles(nomFichier, "out");
+    fse.ensureDir(docObject.corpusRoot,function (error){
+      if (error) {
+         let err = new Error('Erreur de création d\'arborescence : '+error);
+         next(err); 
+        }
+    });
+
+    this.blocFormate = async.queue(this.sendFlux.bind(this),8);
+
+    this.blocFormate.drain = () => {
+      if (this.endFlag){
+        let error = new Error('Le premier docObject passe en erreur afin de ne pas polluer la chaine.');
+        docObject.error = 'Le premier docObject passe en erreur afin de ne pas polluer la chaine.';
+        next(error, docObject);
+      }
+    };
+
+// On décompresse l'archive 
+    decompress(docObject.ingest.path, docObject.corpusRoot, {
+      filter: file => path.extname(file.path) === ".xml"
+    })
+    .catch(function(error){
+      let err = new Error('Erreur de décompression du zip : '+error);
+      next(err);
+    })
+    .then(this.streamInit.bind(this,docObject,next))
+    .catch(function(error){
+      let err = new Error('Erreur de génération du flux : '+error);
+      next(err);
+    });
+  }
+
+  sendFlux (blocContainer,callback){
+    return Promise.try(()=>{
+      let fileName = uuid.v4()+".json";
+      let myDocObjectFilePath = this.getWhereIWriteMyFiles(fileName, "out");
       let directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf("/"));
-      mkdirp.sync(directoryOfMyFile);
-      let writableStream = fse.createWriteStream(myDocObjectFilePath);
-      mkdirp.sync(docObject.corpusRoot);
-      _.each(bloc,(object)=>{
-        object.ingestBaseName=nomFichier; 
-        writableStream.write(JSON.stringify(object) + "\n");
-      });
-      writableStream.end(this.sendRedis.bind(this,myDocObjectFilePath,bloc.length,docObject,next,endFlag));
-    }
+      
+      return fse.ensureDir(directoryOfMyFile)
+      .catch(err=>{
+        console.log(err);
+      })
+      .then(()=>{
+        return Promise.try(()=>{
+          
+          let constructedString = "";
+          _.each(blocContainer.bloc,(docObject)=>{
+            constructedString+=JSON.stringify(docObject) + "\n";
+          })
+
+          let writeStream = fse.createWriteStream(myDocObjectFilePath);
+
+          writeStream.on('error',(error)=>{
+            let err = new Error('Erreur de flux d\'ecriture : '+error);
+            callback (err);
+          });
+         
+          writeStream.write(constructedString);
+          writeStream.end();
+        });
+      })
+      .catch(err=>{
+        console.error(err);
+      })
+      .then(this.sendRedis.bind(this,myDocObjectFilePath,blocContainer,callback));
+    });
   }
 
-  sendRedis(myDocObjectFilePath,length,docObject,next,endFlag=false){
+  sendRedis(myDocObjectFilePath,blocContainer,callback){
     //console.log("envoi des infos à redis key:"+this.redisKey+" path:"+path.basename(myDocObjectFilePath));
-    let pipelineClient = this.redisClient.pipeline();
-    let pipelinePublish = this.pubClient.pipeline();
-    pipelineClient.hincrby("Module:"+this.redisKey,"outDocObject",length)
-    .hincrby("Module:"+this.redisKey,"out",1).exec();
-    pipelinePublish.publish(this.redisKey + ":out",path.basename(myDocObjectFilePath)).exec();
-    this.sendEndFlag(next,docObject,endFlag);
+    return Promise.try(()=>{
+      let pipelineClient = this.redisClient.pipeline();
+      let pipelinePublish = this.pubClient.pipeline();
+      pipelineClient.hincrby("Module:"+this.redisKey,"outDocObject",blocContainer.bloc.length)
+      .hincrby("Module:"+this.redisKey,"out",1).exec();
+      pipelinePublish.publish(this.redisKey + ":out",path.basename(myDocObjectFilePath)).exec();
+      return callback();
+    });
   }
   
-
-  sendEndFlag(next,docObject,endFlag){
-    if (endFlag){
-      console.log("fin");
-      let error = {
-        errCode: 1,
-        errMessage: "Le premier docObject passe en erreur afin de ne pas polluer la chaine."
-      };
-      docObject.error = error;
-      next(error, docObject);
-    }
-  }
 
   finalJob(docObjects, cb){
     cb();
