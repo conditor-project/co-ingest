@@ -37,18 +37,20 @@ class CoIngest {
   pushDocObject(docObject,blocContainer){
     return Promise.try(()=>{
       let arrayPathFile = [];
+      let blocContain = {};
       _.each(blocContainer.bloc,(pathFile)=>{
         let newDocObject;
         newDocObject = _.cloneDeep(docObject);
         newDocObject.id = this.id;
         newDocObject.path = pathFile;
+        //console.log(this.id);
         newDocObject.source = docObject.source;
         newDocObject.ingestId = this.CONDITOR_SESSION;
         this.id++;
         arrayPathFile.push(newDocObject);
-      })
-      blocContainer.bloc = arrayPathFile;
-      this.blocFormate.push(blocContainer);
+      });
+      blocContain.bloc = arrayPathFile;
+      this.blocFormate.push(blocContain);
     });
   }
 
@@ -65,19 +67,22 @@ class CoIngest {
         encoding: "utf8"
       });
 
-      streamXML.stdout.on("data",(chunk)=>{
+      streamXML.stdout.on('data',(chunk)=>{
+        //console.log('data');
         let blocContainer = {};
         listPath+=chunk.toString();
         _.each(listPath.substring(0,listPath.lastIndexOf("\n")).split("\n"),(pathXML)=>{
           if (pathXML.trim()!=="") { listing.push(pathXML.trim()); }
         });
         listPath = listPath.substring(listPath.lastIndexOf("\n"),listPath.length);
+        //console.log('data listing.length : '+listing.length);
         while (listing.length>100){
           bloc=listing.splice(0,100);
           _.shuffle(bloc);
           blocContainer.bloc = bloc;
           this.pushDocObject(docObject,blocContainer);
         }
+        //console.log('data listing.length post while : '+listing.length);
       });
 
       streamXML.stderr.on('data',(chunk)=>{
@@ -86,20 +91,32 @@ class CoIngest {
       });
 
       streamXML.stdout.on("end",(chunk)=>{
+        //console.log('end');
         let blocContainer={};
         this.endFlag = true;
+        if (chunk) { listPath+=chunk.toString();}
         if (listPath.trim()!==""){
           _.each(listPath.split("\n"),(pathXML)=>{
             if (pathXML.trim()!=="") {listing.push(pathXML.trim());}
           });
         }
-        if (listing.length>0){
-          bloc=listing.splice(0,(listing.length));
+        //console.log('end listing.length : '+listing.length);
+        while (listing.length>100){
+          bloc=listing.splice(0,100);
+          //console.log('end bloc.length in while: '+bloc.length);
           _.shuffle(bloc);
           blocContainer.bloc = bloc;
           this.pushDocObject(docObject,blocContainer);
         }
-        
+        //console.log('end listing.length post while: '+listing.length);
+        if (listing.length>0){
+          bloc=listing.splice(0,listing.length);
+          //console.log('end bloc.length post while: '+bloc.length);         
+          _.shuffle(bloc);
+          blocContainer.bloc = bloc;
+          this.pushDocObject(docObject,blocContainer);
+        }
+        //console.log('end listing.length post flush : '+listing.length);
       });
     });
   }
@@ -116,6 +133,7 @@ class CoIngest {
     this.blocFormate = async.queue(this.sendFlux.bind(this),8);
 
     this.blocFormate.drain = () => {
+      //console.log('drain');
       if (this.endFlag){
         let error = new Error('Le premier docObject passe en erreur afin de ne pas polluer la chaine.');
         docObject.error = 'Le premier docObject passe en erreur afin de ne pas polluer la chaine.';
@@ -152,7 +170,9 @@ class CoIngest {
         return Promise.try(()=>{
           
           let constructedString = "";
+          //console.log('on commence le parcours du blocContainer');
           _.each(blocContainer.bloc,(docObject)=>{
+            //console.log(docObject.id);
             constructedString+=JSON.stringify(docObject) + "\n";
           })
 
@@ -160,7 +180,7 @@ class CoIngest {
 
           writeStream.on('error',(error)=>{
             let err = new Error('Erreur de flux d\'ecriture : '+error);
-            callback (err);
+            callback(err);
           });
          
           writeStream.write(constructedString);
@@ -177,12 +197,13 @@ class CoIngest {
   sendRedis(myDocObjectFilePath,blocContainer,callback){
     //console.log("envoi des infos à redis key:"+this.redisKey+" path:"+path.basename(myDocObjectFilePath));
     return Promise.try(()=>{
+      //console.log('sendRedis');
       let pipelineClient = this.redisClient.pipeline();
       let pipelinePublish = this.pubClient.pipeline();
       pipelineClient.hincrby("Module:"+this.redisKey,"outDocObject",blocContainer.bloc.length)
       .hincrby("Module:"+this.redisKey,"out",1).exec();
       pipelinePublish.publish(this.redisKey + ":out",path.basename(myDocObjectFilePath)).exec();
-      return callback();
+      callback();
     });
   }
   
