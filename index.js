@@ -34,6 +34,11 @@ class CoIngest {
 
   }
 
+  disconnect(){
+    this.pubClient.disconnect();
+    this.redisClient.disconnect();
+  }
+
   pushDocObject(docObject,blocContainer){
     return Promise.try(()=>{
       let arrayPathFile = [];
