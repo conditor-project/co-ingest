@@ -125,8 +125,8 @@ describe(pkg.name + '/index.js', function() {
         fs.removeSync(jsonInput.corpusRoot);
         fs.removeSync(outDir);
         fs.removeSync(logDir);
-        business.disconnect();
-        done();
+        business.finalJob(null,done);
+        //done();
 
     });
 

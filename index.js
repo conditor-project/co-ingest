@@ -35,8 +35,18 @@ class CoIngest {
   }
 
   disconnect(){
-    this.pubClient.disconnect();
-    this.redisClient.disconnect();
+    Promise.try(()=>{
+      return this.pubClient.disconnect();
+    })
+    
+    .then(()=>{
+      return Promise.try(()=>{
+        return this.redisClient.disconnect();
+      });
+    })
+    .catch(err=>{
+      throw('Erreur de fermeture ioredis.')
+    });
   }
 
   pushDocObject(docObject,blocContainer){
@@ -213,9 +223,19 @@ class CoIngest {
   }
   
 
-  finalJob(docObjects, cb){
-    cb();
+  
+  finalJob(docObjects,done){
+    Promise.try(()=>{
+      return this.disconnect();
+    })
+    .catch(err=>{
+      done(err);
+    })
+    .then(()=>{
+      done();
+    })
   }
+
 
 
   getWhereIWriteMyFiles(file, dirOutOrErr) {
