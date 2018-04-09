@@ -31,6 +31,7 @@ class CoIngest {
     this.redisKey = this.CONDITOR_SESSION + ":co-ingest";
     this.id = 0 ;
     this.endFlag = false;
+    this.sendFlag = false;
 
   }
 
@@ -182,24 +183,28 @@ class CoIngest {
         console.log(err);
       })
       .then(()=>{
-        return Promise.try(()=>{
-          
+        Promise.try(()=>{
           let constructedString = "";
           //console.log('on commence le parcours du blocContainer');
           _.each(blocContainer.bloc,(docObject)=>{
             //console.log(docObject.id);
             constructedString+=JSON.stringify(docObject) + "\n";
           })
+          if (constructedString!==""){
+            let writeStream = fse.createWriteStream(myDocObjectFilePath);
 
-          let writeStream = fse.createWriteStream(myDocObjectFilePath);
-
-          writeStream.on('error',(error)=>{
-            let err = new Error('Erreur de flux d\'ecriture : '+error);
-            callback(err);
-          });
-         
-          writeStream.write(constructedString);
-          writeStream.end();
+            writeStream.on('error',(error)=>{
+              let err = new Error('Erreur de flux d\'ecriture : '+error);
+              callback(err);
+            });
+          
+            writeStream.write(constructedString);
+            writeStream.end();
+            this.sendFlag = true;
+          }
+          else {
+            this.sendFlag = false;
+          }
         });
       })
       .catch(err=>{
@@ -213,12 +218,17 @@ class CoIngest {
     //console.log("envoi des infos à redis key:"+this.redisKey+" path:"+path.basename(myDocObjectFilePath));
     return Promise.try(()=>{
       //console.log('sendRedis');
-      let pipelineClient = this.redisClient.pipeline();
-      let pipelinePublish = this.pubClient.pipeline();
-      pipelineClient.hincrby("Module:"+this.redisKey,"outDocObject",blocContainer.bloc.length)
-      .hincrby("Module:"+this.redisKey,"out",1).exec();
-      pipelinePublish.publish(this.redisKey + ":out",path.basename(myDocObjectFilePath)).exec();
-      callback();
+      if (this.sendFlag===true){
+        let pipelineClient = this.redisClient.pipeline();
+        let pipelinePublish = this.pubClient.pipeline();
+        pipelineClient.hincrby("Module:"+this.redisKey,"outDocObject",blocContainer.bloc.length)
+        .hincrby("Module:"+this.redisKey,"out",1).exec();
+        pipelinePublish.publish(this.redisKey + ":out",path.basename(myDocObjectFilePath)).exec();
+        callback();
+      }
+      else {
+        callback();
+      }
     });
   }
   
