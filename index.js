@@ -183,7 +183,7 @@ class CoIngest {
         console.log(err);
       })
       .then(()=>{
-        Promise.try(()=>{
+        return Promise.try(()=>{
           let constructedString = "";
           //console.log('on commence le parcours du blocContainer');
           _.each(blocContainer.bloc,(docObject)=>{
@@ -205,6 +205,7 @@ class CoIngest {
           else {
             this.sendFlag = false;
           }
+          return true;
         });
       })
       .catch(err=>{
