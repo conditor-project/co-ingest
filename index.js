@@ -138,12 +138,10 @@ class CoIngest {
 
     decompress(docObject.ingest.path, docObject.corpusRoot, {
       filter: file => path.extname(file.path) === '.xml'
-    })
-      .catch(function (error) {
-        let err = new Error('Erreur de décompression du zip : ' + error);
-        next(err);
-      })
-      .then(this.streamInit.bind(this, docObject, next))
+    }).catch(function (error) {
+      let err = new Error('Erreur de décompression du zip : ' + error);
+      next(err);
+    }).then(this.streamInit.bind(this, docObject, next))
       .catch(function (error) {
         let err = new Error('Erreur de génération du flux : ' + error);
         next(err);
@@ -156,33 +154,27 @@ class CoIngest {
       let myDocObjectFilePath = this.getWhereIWriteMyFiles(fileName, 'out');
       let directoryOfMyFile = myDocObjectFilePath.substr(0, myDocObjectFilePath.lastIndexOf('/'));
 
-      return fse.ensureDir(directoryOfMyFile)
-        .catch(err => {
-          console.log(err);
-        })
-        .then(() => {
-          return Promise.try(() => {
-            let constructedString = '';
-            _.each(blocContainer.bloc, (docObject) => {
-              constructedString += JSON.stringify(docObject) + '\n';
-            });
-            if (constructedString !== '') {
-              try {
-                fse.writeFileSync(myDocObjectFilePath, constructedString);
-              } catch (err) {
-                callback(new Error('Erreur de flux d\'ecriture : ' + err));
-              }
-              this.sendFlag = true;
-            } else {
-              this.sendFlag = false;
-            }
-            return true;
+      return fse.ensureDir(directoryOfMyFile).then(() => {
+        return Promise.try(() => {
+          let constructedString = '';
+          _.each(blocContainer.bloc, (docObject) => {
+            constructedString += JSON.stringify(docObject) + '\n';
           });
-        })
-        .catch(err => {
-          console.error(err);
-        })
-        .then(this.sendRedis.bind(this, myDocObjectFilePath, blocContainer, callback));
+          if (constructedString !== '') {
+            try {
+              fse.writeFileSync(myDocObjectFilePath, constructedString);
+            } catch (err) {
+              callback(new Error('Erreur de flux d\'ecriture : ' + err));
+            }
+            this.sendFlag = true;
+          } else {
+            this.sendFlag = false;
+          }
+          return true;
+        });
+      }).then(this.sendRedis.bind(this, myDocObjectFilePath, blocContainer, callback)).catch(err => {
+        console.error(err);
+      });
     });
   }
 
