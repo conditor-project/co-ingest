@@ -1,6 +1,6 @@
 {
   "name": "co-ingest",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Module conditor de début de chaîne.",
   "main": "index.js",
   "scripts": {
