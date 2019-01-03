@@ -52,7 +52,7 @@ class CoIngest {
         newDocObject.id = this.id;
         newDocObject.path = pathFile;
         newDocObject.source = docObject.source;
-        newDocObject.ingestId = this.CONDITOR_SESSION;
+        newDocObject.sessionName = this.CONDITOR_SESSION;
         this.id++;
         arrayPathFile.push(newDocObject);
       });
