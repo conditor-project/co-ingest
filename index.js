@@ -51,6 +51,7 @@ class CoIngest {
         newDocObject = _.cloneDeep(docObject);
         newDocObject.id = this.id;
         newDocObject.path = pathFile;
+        newDocObject.originDocPath = pathFile;
         newDocObject.source = docObject.source;
         newDocObject.sessionName = this.CONDITOR_SESSION;
         this.id++;
